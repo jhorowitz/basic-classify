@@ -17,7 +17,12 @@ train_gen = train_datagen.flow_from_directory(
     batch_size=batch_size,
     class_mode='binary')
 
-val_gen = val_datagen.flow_from_directory("training_data/validate")
+val_gen = val_datagen.flow_from_directory(
+    "training_data/validate",
+    target_size=(300, 300),
+    batch_size=batch_size,
+    class_mode='binary'
+)
 
 
 def add_conv_set(layer, conv_size):
@@ -28,15 +33,18 @@ def add_conv_set(layer, conv_size):
     return layer
 
 
-inp = Input((300, 300, 3))
+def add_binary_set(layer):
+    layer = Flatten()(layer)
+    layer = Dense(256, activation='relu')(layer)
+    layer = Dropout(.25)(layer)
+    layer = Dense(1, activation='sigmoid')(layer)
+    return layer
 
+
+inp = Input((300, 300, 3))
 X = add_conv_set(inp, 32)
 X = add_conv_set(X, 64)
-
-X = Flatten()(X)
-X = Dense(256, activation='relu')(X)
-X = Dropout(.25)(X)
-X = Dense(1, activation='sigmoid')(X)
+X = add_binary_set(X)
 
 model = Model(inputs=inp, outputs=X)
 
@@ -44,7 +52,7 @@ model.compile("rmsprop", loss='binary_crossentropy', metrics=['accuracy'])
 
 model.fit_generator(
     train_gen,
-    steps_per_epoch=2000 // batch_size,
+    steps_per_epoch=5,
     epochs=50,
     validation_data=val_gen,
     validation_steps=800 // batch_size)
